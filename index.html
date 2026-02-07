@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+  <html lang="pt-br">
+  <head>
+  <meta charset="UTF-8">
+  <title>EMP COIN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <style>
+  body {
+    font-family: Arial;
+    background: #0f172a;
+    color: #fff;
+    padding: 20px;
+  }
+  h1 { text-align: center; }
+  .card {
+    background: #1e293b;
+    padding: 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+  }
+  input, button, select {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 8px;
+    border: none;
+  }
+  button {
+    background: #22c55e;
+    font-weight: bold;
+  }
+  .hidden { display: none; }
+  ul { padding-left: 20px; }
+  .rank li { margin-bottom: 6px; }
+  .small { font-size: 12px; opacity: 0.8; }
+  .danger { background:#ef4444; }
+  </style>
+  </head>
+  
+  <body>
+  
+  <h1>🏫 EMP COIN</h1>
+  
+  <!-- LOGIN -->
+  <div class="card" id="login">
+    <h2>🔐 Login</h2>
+    <select id="tipo">
+      <option value="prof">Professor</option>
+      <option value="aluno">Aluno</option>
+    </select>
+    <input type="password" id="pinLogin" placeholder="PIN (6 dígitos)">
+    <input type="password" id="senhaLogin" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+  </div>
+  
+  <!-- PROFESSOR -->
+  <div class="card hidden" id="professor">
+    <h2>👨‍🏫 Professor</h2>
+    <p>Saldo: <b><span id="saldoProfessor"></span></b> EMP COIN</p>
+  
+    <h3>➕ Criar aluno</h3>
+    <input id="novoPin" placeholder="PIN do aluno (6 dígitos)">
+    <input id="novaSenha" placeholder="Senha do aluno">
+    <button onclick="criarAluno()">Criar aluno</button>
+  
+    <h3>📤 Enviar EMP COIN</h3>
+    <input id="valorEnvio" type="number" placeholder="Valor">
+    <input id="pinAluno" placeholder="PIN do aluno">
+    <button onclick="enviar()">Enviar</button>
+  
+    <button onclick="exportar()" class="danger">📦 Exportar dados</button>
+    <p class="small">Reset diário automático para 10 EMP COINS</p>
+    <button onclick="logout()">Sair</button>
+  </div>
+  
+  <!-- ALUNO -->
+  <div class="card hidden" id="aluno">
+    <h2>👨‍🎓 Aluno</h2>
+    <p>Saldo: <b><span id="saldoAluno"></span></b> EMP COIN</p>
+    <button onclick="logout()">Sair</button>
+  </div>
+  
+  <!-- RANKING -->
+  <div class="card">
+    <h3>🏆 Ranking</h3>
+    <ul id="ranking" class="rank"></ul>
+  </div>
+  
+  <!-- HISTÓRICO -->
+  <div class="card">
+    <h3>📜 Histórico</h3>
+    <ul id="historico"></ul>
+  </div>
+  
+  <script>
+  /* CONFIG */
+  const PIN_PROFESSOR = "123456";
+  const SENHA_PROFESSOR = "admin";
+  const SALDO_DIARIO = 10;
+  
+  /* DADOS */
+  let professor = JSON.parse(localStorage.getItem("professor")) || {
+    saldo: SALDO_DIARIO,
+    ultimoReset: new Date().toDateString()
+  };
+  
+  let alunos = JSON.parse(localStorage.getItem("alunos")) || {};
+  let historico = JSON.parse(localStorage.getItem("historico")) || [];
+  
+  let alunoLogado = null;
+  
+  /* RESET DIÁRIO */
+  let hoje = new Date().toDateString();
+  if (professor.ultimoReset !== hoje) {
+    professor.saldo = SALDO_DIARIO;
+    professor.ultimoReset = hoje;
+    historico.push("🔄 Reset diário do professor");
+  }
+  
+  /* ELEMENTOS */
+  const loginDiv = document.getElementById("login");
+  const profDiv = document.getElementById("professor");
+  const alunoDiv = document.getElementById("aluno");
+  
+  function salvar() {
+    localStorage.setItem("professor", JSON.stringify(professor));
+    localStorage.setItem("alunos", JSON.stringify(alunos));
+    localStorage.setItem("historico", JSON.stringify(historico));
+  }
+  
+  function login() {
+    let tipo = document.getElementById("tipo").value;
+    let pin = document.getElementById("pinLogin").value;
+    let senha = document.getElementById("senhaLogin").value;
+  
+    if (!/^\d{6}$/.test(pin)) {
+      alert("PIN inválido");
+      return;
+    }
+  
+    if (tipo === "prof") {
+      if (pin !== PIN_PROFESSOR || senha !== SENHA_PROFESSOR) {
+        alert("Credenciais do professor incorretas");
+        return;
+      }
+      loginDiv.classList.add("hidden");
+      profDiv.classList.remove("hidden");
+    } else {
+      if (!alunos[pin] || alunos[pin].senha !== senha) {
+        alert("Aluno não encontrado ou senha incorreta");
+        return;
+      }
+      alunoLogado = pin;
+      loginDiv.classList.add("hidden");
+      alunoDiv.classList.remove("hidden");
+    }
+    atualizar();
+  }
+  
+  function logout() {
+    alunoLogado = null;
+    loginDiv.classList.remove("hidden");
+    profDiv.classList.add("hidden");
+    alunoDiv.classList.add("hidden");
+  }
+  
+  function criarAluno() {
+    let pin = document.getElementById("novoPin").value;
+    let senha = document.getElementById("novaSenha").value;
+  
+    if (!/^\d{6}$/.test(pin) || senha.length < 3) {
+      alert("PIN ou senha inválidos");
+      return;
+    }
+    if (alunos[pin]) {
+      alert("Aluno já existe");
+      return;
+    }
+  
+    alunos[pin] = { saldo: 0, senha };
+    historico.push("👤 Aluno criado: " + pin);
+    atualizar();
+  }
+  
+  function enviar() {
+    let valor = Number(document.getElementById("valorEnvio").value);
+    let pin = document.getElementById("pinAluno").value;
+  
+    if (!alunos[pin]) {
+      alert("Aluno inexistente");
+      return;
+    }
+    if (valor <= 0 || valor > professor.saldo) {
+      alert("Saldo insuficiente");
+      return;
+    }
+  
+    professor.saldo -= valor;
+    alunos[pin].saldo += valor;
+  
+    historico.push("💰 " + valor + " EMP COIN → aluno " + pin);
+    atualizar();
+  }
+  
+  function exportar() {
+    let dados = {
+      professor,
+      alunos,
+      historico
+    };
+    alert("COPIE OS DADOS:\n\n" + JSON.stringify(dados, null, 2));
+  }
+  
+  function atualizar() {
+    document.getElementById("saldoProfessor").textContent = professor.saldo;
+    if (alunoLogado) {
+      document.getElementById("saldoAluno").textContent =
+        alunos[alunoLogado].saldo;
+    }
+  
+    let ranking = document.getElementById("ranking");
+    ranking.innerHTML = "";
+    Object.entries(alunos)
+      .sort((a, b) => b[1].saldo - a[1].saldo)
+      .forEach(([pin, data], i) => {
+        let li = document.createElement("li");
+        li.textContent = (i + 1) + "º Aluno " + pin + " → " + data.saldo + " EMP COIN";
+        ranking.appendChild(li);
+      });
+  
+    let hist = document.getElementById("historico");
+    hist.innerHTML = "";
+    historico.slice(-15).forEach(h => {
+      let li = document.createElement("li");
+      li.textContent = h;
+      hist.appendChild(li);
+    });
+  
+    salvar();
+  }
+  
+  atualizar();
+  </script>
+  
+  </body>
+    </html>
+    
