@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>EMP COIN</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      padding: 10px;
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    .card {
+      background: #1e293b;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      background: #22c55e;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button.danger {
+      background: #ef4444;
+    }
+    ul {
+      padding-left: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>💰 EMP COIN</h1>
+
+<!-- ================= ADM ================= -->
+<div class="card">
+  <h2>👑 ADM</h2>
+  <input id="admSenha" placeholder="Senha ADM">
+  <button onclick="loginADM()">Entrar</button>
+  <div id="admPainel" style="display:none">
+    <button onclick="resetarSaldos()">Resetar moedas</button>
+  </div>
+</div>
+
+<!-- ================= PROFESSOR ================= -->
+<div class="card">
+  <h2>👨‍🏫 Professor</h2>
+  <input id="pinProfessor" placeholder="PIN do professor (6 dígitos)">
+  <button onclick="loginProfessor()">Entrar</button>
+  <p id="profInfo"></p>
+
+  <input id="pinAlunoEnvio" placeholder="PIN do aluno">
+  <input id="valorEnvio" placeholder="EMP COIN a enviar">
+  <button onclick="enviarMoeda()">Enviar EMP COIN</button>
+</div>
+
+<!-- ================= ALUNO ================= -->
+<div class="card">
+  <h2>🎓 Aluno</h2>
+  <input id="pinAluno" placeholder="PIN do aluno">
+  <button onclick="loginAluno()">Entrar</button>
+  <p id="alunoInfo"></p>
+</div>
+
+<!-- ================= RANKING ================= -->
+<div class="card">
+  <h2>🏆 Ranking de Alunos</h2>
+  <ul id="ranking"></ul>
+</div>
+
+<script>
+/* ================= DADOS ================= */
+
+let professores = JSON.parse(localStorage.getItem("professores")) || {
+  "111111": { nome: "Prof Ana", saldo: 10 },
+  "222222": { nome: "Prof João", saldo: 10 }
+};
+
+let alunos = JSON.parse(localStorage.getItem("alunos")) || {
+  "333333": { nome: "Aluno Lucas", saldo: 0 },
+  "444444": { nome: "Aluno Maria", saldo: 0 }
+};
+
+let professorLogado = null;
+let alunoLogado = null;
+
+/* ================= SALVAR ================= */
+
+function salvarTudo() {
+  localStorage.setItem("professores", JSON.stringify(professores));
+  localStorage.setItem("alunos", JSON.stringify(alunos));
+}
+
+/* ================= ADM ================= */
+
+function loginADM() {
+  let senha = document.getElementById("admSenha").value;
+  if (senha === "14122010") {
+    document.getElementById("admPainel").style.display = "block";
+    alert("ADM logado");
+  } else {
+    alert("Senha ADM incorreta");
+  }
+}
+
+function resetarSaldos() {
+  for (let p in professores) professores[p].saldo = 10;
+  for (let a in alunos) alunos[a].saldo = 0;
+  salvarTudo();
+  atualizarRanking();
+  alert("Saldos resetados");
+}
+
+/* ================= PROFESSOR ================= */
+
+function loginProfessor() {
+  let pin = document.getElementById("pinProfessor").value;
+  if (professores[pin]) {
+    professorLogado = pin;
+    document.getElementById("profInfo").innerText =
+      professores[pin].nome + " | Saldo: " +
+      professores[pin].saldo + " EMP COIN";
+  } else {
+    alert("PIN inválido");
+  }
+}
+
+function enviarMoeda() {
+  if (!professorLogado) {
+    alert("Professor não logado");
+    return;
+  }
+
+  let pinAluno = document.getElementById("pinAlunoEnvio").value;
+  let valor = Number(document.getElementById("valorEnvio").value);
+
+  if (!alunos[pinAluno]) {
+    alert("Aluno não encontrado");
+    return;
+  }
+
+  if (valor <= 0 || professores[professorLogado].saldo < valor) {
+    alert("Saldo insuficiente ou valor inválido");
+    return;
+  }
+
+  professores[professorLogado].saldo -= valor;
+  alunos[pinAluno].saldo += valor;
+
+  salvarTudo();
+  atualizarRanking();
+
+  document.getElementById("profInfo").innerText =
+    professores[professorLogado].nome + " | Saldo: " +
+    professores[professorLogado].saldo + " EMP COIN";
+
+  alert("EMP COIN enviada!");
+}
+
+/* ================= ALUNO ================= */
+
+function loginAluno() {
+  let pin = document.getElementById("pinAluno").value;
+  if (alunos[pin]) {
+    alunoLogado = pin;
+    document.getElementById("alunoInfo").innerText =
+      alunos[pin].nome + " | Saldo: " +
+      alunos[pin].saldo + " EMP COIN";
+  } else {
+    alert("PIN inválido");
+  }
+}
+
+/* ================= RANKING ================= */
+
+function atualizarRanking() {
+  let lista = document.getElementById("ranking");
+  lista.innerHTML = "";
+
+  let ranking = Object.values(alunos)
+    .sort((a, b) => b.saldo - a.saldo);
+
+  ranking.forEach(a => {
+    let li = document.createElement("li");
+    li.innerText = a.nome + " — " + a.saldo + " EMP COIN";
+    lista.appendChild(li);
+  });
+}
+
+atualizarRanking();
+</script>
+
+</body>
+</html>
